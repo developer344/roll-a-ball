@@ -14,6 +14,9 @@ public class CameraController : MonoBehaviour
     // Update is called once per frame
     void LateUpdate()
     {
+        // Stop following once the player has been destroyed.
+        if (player == null) return;
+
         transform.position = player.transform.position + offset; // Update the camera's position to follow the player
     }
 }

@@ -26,6 +26,8 @@ public class PlayerController : MonoBehaviour
     {
         // Get and store the Rigidbody component attached to the player.
         rb = GetComponent<Rigidbody>();
+        // Never let the Rigidbody sleep, so the enemy can still hit a player standing still.
+        rb.sleepThreshold = 0.0f;
         count = 0;
         SetCountText();
         winTextObject.SetActive(false);
@@ -48,6 +50,8 @@ public class PlayerController : MonoBehaviour
         if (count >= 12)
         {
             winTextObject.SetActive(true);
+            // Play the win light show.
+            WinCelebration.Play(winTextObject);
             // Destroy any remaining enemies (none is fine).
             foreach (GameObject enemy in GameObject.FindGameObjectsWithTag("Enemy"))
             {
@@ -82,9 +86,8 @@ public class PlayerController : MonoBehaviour
         {
             // Destroy the current object
             Destroy(gameObject);
-            // Update the winText to display "You Lose!"
-            winTextObject.gameObject.SetActive(true);
-            winTextObject.GetComponent<TextMeshProUGUI>().text = "You Lose!";
+            // Show the bloody "You Lose!" screen.
+            LoseScreen.Play(winTextObject);
         }
     }
 }
