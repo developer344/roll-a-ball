@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 
 // The lose screen: the screen goes black, a blood-red "You Lose!" fades in, blood drips
-// run down from the bottom of its letters, and after a moment a Replay button shows up.
+// run down from the bottom of its letters, and after a moment Replay and Home buttons show up.
 // Everything is built at runtime by LoseScreen.Play(), so nothing needs to be set up in the scene.
 public class LoseScreen : EndScreen
 {
@@ -13,7 +13,7 @@ public class LoseScreen : EndScreen
     public float textFade = 0.8f;
     public float dripTime = 6.0f;
 
-    // Delay after the text appears before the Replay button shows up.
+    // Delay after the text appears before the Replay and Home buttons show up.
     public float replayDelay = 2.5f;
 
     // The text and the drips share this color so the blood looks like it comes out of the letters.
@@ -54,7 +54,7 @@ public class LoseScreen : EndScreen
         drips.color = bloodColor;
         drips.raycastTarget = false;
 
-        replayGroup = CreateReplayButton(loseLabel.font, new Color(0.35f, 0.0f, 0.0f), Color.white);
+        replayGroup = CreateEndButtons(loseLabel.font, new Color(0.35f, 0.0f, 0.0f), Color.white);
     }
 
     IEnumerator Animate()
@@ -69,7 +69,7 @@ public class LoseScreen : EndScreen
         PlaySound(SoundFx.Doom());
         yield return Over(textFade, t => loseGroup.alpha = t);
 
-        // Drips run while we wait for the Replay button, and keep going after it appears.
+        // Drips run while we wait for the buttons, and keep going after they appear.
         StartCoroutine(Over(dripTime, t => drips.SetTime(t * dripTime)));
         StartCoroutine(PlayDripSounds());
         yield return new WaitForSecondsRealtime(replayDelay);

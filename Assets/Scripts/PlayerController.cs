@@ -21,6 +21,15 @@ public class PlayerController : MonoBehaviour
 
     private int count;
 
+    // Sound played when a pickup is collected.
+    public AudioClip pickupSound;
+    private AudioSource audioSource;
+
+    // Music looped during gameplay. It stops on win, and on lose when the player is destroyed.
+    public AudioClip gameplayMusic;
+    public float musicVolume = 0.5f;
+    private AudioSource musicSource;
+
     // Start is called before the first frame update.
     void Start()
     {
@@ -28,6 +37,32 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         // Never let the Rigidbody sleep, so the enemy can still hit a player standing still.
         rb.sleepThreshold = 0.0f;
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        // Fall back to Assets/Sounds/Resources/pickup.mp3 when nothing is set in the Inspector.
+        if (pickupSound == null) pickupSound = Resources.Load<AudioClip>("pickup");
+        if (pickupSound == null)
+        {
+            Debug.LogWarning("PlayerController: no Pickup Sound assigned, so collecting moons will be silent.");
+        }
+        else
+        {
+            // The clip doesn't preload, so load it now rather than on the first pickup.
+            pickupSound.LoadAudioData();
+        }
+
+        // Fall back to Assets/Sounds/Resources/gameplay_soundtrack.mp3 when nothing is set in the Inspector.
+        if (gameplayMusic == null) gameplayMusic = Resources.Load<AudioClip>("gameplay_soundtrack");
+        if (gameplayMusic != null)
+        {
+            // A separate source so the music can be stopped without cutting off pickup sounds.
+            musicSource = gameObject.AddComponent<AudioSource>();
+            musicSource.clip = gameplayMusic;
+            musicSource.loop = true;
+            musicSource.volume = musicVolume;
+            musicSource.Play();
+        }
+
         count = 0;
         SetCountText();
         winTextObject.SetActive(false);
@@ -42,14 +77,16 @@ public class PlayerController : MonoBehaviour
         // Store the X and Y components of the movement.
         movementX = movementVector.x;
         movementY = movementVector.y;
+
     }
 
     void SetCountText()
     {
-        countText.text = "Count: " + count.ToString();
+        countText.text = "Moons Collected\n" + count.ToString() + "/12";
         if (count >= 12)
         {
             winTextObject.SetActive(true);
+            if (musicSource != null) musicSource.Stop();
             // Play the win light show.
             WinCelebration.Play(winTextObject);
             // Destroy any remaining enemies (none is fine).
@@ -75,6 +112,7 @@ public class PlayerController : MonoBehaviour
         if (other.gameObject.CompareTag("PickUp"))
         {
             other.gameObject.SetActive(false);
+            if (pickupSound != null) audioSource.PlayOneShot(pickupSound);
             count = count + 1;
             SetCountText();
         }

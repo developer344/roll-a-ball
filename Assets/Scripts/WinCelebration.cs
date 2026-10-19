@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 
 // The win screen: the screen goes black, a lightning bolt strikes, "You Win!" appears
-// behind it, and after a moment a Replay button shows up.
+// behind it, and after a moment Replay and Home buttons show up.
 // Everything is built at runtime by WinCelebration.Play(), so nothing needs to be set up in the scene.
 public class WinCelebration : EndScreen
 {
@@ -16,15 +16,11 @@ public class WinCelebration : EndScreen
     public float flashFade = 0.3f;
     public float boltFade = 0.3f;
 
-    // Delay after the strike before the Replay button appears.
+    // Delay after the strike before the Replay and Home buttons appear.
     public float replayDelay = 0.3f;
-
-    // Color of the bolt icons on either side of the text.
-    public Color iconColor = new Color(1.0f, 0.85f, 0.2f);
 
     private TextMeshProUGUI winLabel;
     private CanvasGroup winGroup;
-    private BoltIcon[] icons;
     private LightningBolt bolt;
     private Image flash;
     private CanvasGroup replayGroup;
@@ -42,7 +38,7 @@ public class WinCelebration : EndScreen
         screen.StartCoroutine(screen.Animate());
     }
 
-    // Black background, text, bolt icons, bolt, flash and Replay button.
+    // Black background, text, bolt, flash and Replay and Home buttons.
     void Build(TextMeshProUGUI hudLabel)
     {
         // Black background covering the game and the HUD.
@@ -54,23 +50,6 @@ public class WinCelebration : EndScreen
         winGroup = winLabel.gameObject.AddComponent<CanvasGroup>();
         winGroup.alpha = 0.0f;
 
-        // A bolt icon on each side of the text, hidden until the strike.
-        // They're moved into place beside the text in AnimateIcons(), once the text has its real size.
-        icons = new BoltIcon[2];
-        for (int i = 0; i < 2; i++)
-        {
-            GameObject iconObject = new GameObject("BoltIcon", typeof(RectTransform), typeof(CanvasRenderer));
-            iconObject.transform.SetParent(transform, false);
-            RectTransform rect = (RectTransform)iconObject.transform;
-            rect.sizeDelta = new Vector2(140, 200);
-            // Mirror the left one so the pair is symmetrical.
-            rect.localScale = new Vector3(i == 0 ? -1 : 1, 1, 1);
-            icons[i] = iconObject.AddComponent<BoltIcon>();
-            icons[i].color = iconColor;
-            icons[i].raycastTarget = false;
-            icons[i].enabled = false;
-        }
-
         bolt = CreateFullScreen<LightningBolt>("LightningBolt");
         bolt.color = Color.white;
         bolt.raycastTarget = false;
@@ -79,7 +58,7 @@ public class WinCelebration : EndScreen
         flash.color = new Color(1, 1, 1, 0);
         flash.raycastTarget = false;
 
-        replayGroup = CreateReplayButton(winLabel.font, Color.white, Color.black);
+        replayGroup = CreateEndButtons(winLabel.font, Color.white, Color.black);
     }
 
     IEnumerator Animate()
@@ -101,7 +80,6 @@ public class WinCelebration : EndScreen
         winGroup.alpha = 1.0f;
         PlaySound(SoundFx.Thunder());
         StartCoroutine(PlayVictoryJingle());
-        StartCoroutine(AnimateIcons());
 
         // The bolt flickers, jumping to a new shape once, while the flash fades.
         StartCoroutine(Over(flashFade, t => flash.color = new Color(1, 1, 1, 0.9f * (1.0f - t))));
@@ -126,37 +104,5 @@ public class WinCelebration : EndScreen
     {
         yield return new WaitForSecondsRealtime(0.35f);
         PlaySound(SoundFx.Victory(), 0.7f);
-    }
-
-    // The icons slam in from large to normal size, then flicker like live electricity.
-    IEnumerator AnimateIcons()
-    {
-        // Place the icons just outside the text, but always on screen.
-        winLabel.ForceMeshUpdate();
-        float iconX = Mathf.Clamp(winLabel.textBounds.extents.x + 110.0f, 200.0f, 850.0f);
-
-        Vector3[] scales = new Vector3[icons.Length];
-        for (int i = 0; i < icons.Length; i++)
-        {
-            icons[i].rectTransform.anchoredPosition = new Vector2(i == 0 ? -iconX : iconX, 0);
-            scales[i] = icons[i].rectTransform.localScale;
-            icons[i].enabled = true;
-        }
-
-        yield return Over(0.25f, t =>
-        {
-            float grow = Mathf.Lerp(1.8f, 1.0f, t * t);
-            for (int i = 0; i < icons.Length; i++) icons[i].rectTransform.localScale = scales[i] * grow;
-        });
-
-        // Every so often, one icon blinks dim for a moment.
-        while (true)
-        {
-            yield return new WaitForSecondsRealtime(Random.Range(0.15f, 0.8f));
-            BoltIcon icon = icons[Random.Range(0, icons.Length)];
-            icon.color = new Color(iconColor.r, iconColor.g, iconColor.b, 0.3f);
-            yield return new WaitForSecondsRealtime(0.05f);
-            icon.color = iconColor;
-        }
     }
 }

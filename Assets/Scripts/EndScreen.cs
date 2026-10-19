@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 
 // Shared base for the full-screen win and lose screens: an overlay canvas on top of everything,
-// helpers to build UI on it at runtime, a Replay button, and timing helpers on unscaled time.
+// helpers to build UI on it at runtime, Replay and Home buttons, and timing helpers on unscaled time.
 public abstract class EndScreen : MonoBehaviour
 {
     // The end screen currently showing, so only one ever runs (no lose screen on top of a win).
@@ -39,10 +39,22 @@ public abstract class EndScreen : MonoBehaviour
         source.PlayOneShot(clip, volume);
     }
 
+    // The start menu scene the Home button goes back to.
+    const string HomeScenePath = "Assets/Scenes/StartMenu.unity";
+
     protected void Replay()
     {
+        LoadScene(SceneManager.GetActiveScene().path);
+    }
+
+    protected void GoHome()
+    {
+        LoadScene(HomeScenePath);
+    }
+
+    static void LoadScene(string scenePath)
+    {
         Time.timeScale = 1.0f;
-        string scenePath = SceneManager.GetActiveScene().path;
 #if UNITY_EDITOR
         // Works in the editor even if the scene isn't in the Build Settings.
         UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(scenePath, new LoadSceneParameters(LoadSceneMode.Single));
@@ -62,7 +74,7 @@ public abstract class EndScreen : MonoBehaviour
         step(1.0f);
     }
 
-    // Fades the Replay button in and makes it clickable.
+    // Fades the Replay and Home buttons in and makes them clickable.
     protected static IEnumerator ShowReplay(CanvasGroup replayGroup)
     {
         yield return Over(0.4f, t => replayGroup.alpha = t);
@@ -96,35 +108,18 @@ public abstract class EndScreen : MonoBehaviour
         return title;
     }
 
-    // A hidden Replay button below the title; fade it in with ShowReplay().
-    protected CanvasGroup CreateReplayButton(TMP_FontAsset font, Color buttonColor, Color textColor)
+    // Hidden Replay and Home buttons below the title, in the same pixel style as the menu buttons;
+    // fade them in with ShowReplay().
+    protected CanvasGroup CreateEndButtons(TMP_FontAsset font, Color buttonColor, Color textColor)
     {
-        GameObject buttonObject = new GameObject("ReplayButton", typeof(RectTransform), typeof(CanvasRenderer));
-        buttonObject.transform.SetParent(transform, false);
-        RectTransform rect = (RectTransform)buttonObject.transform;
-        rect.anchoredPosition = new Vector2(0, -220);
-        rect.sizeDelta = new Vector2(360, 100);
+        GameObject buttons = new GameObject("EndButtons", typeof(RectTransform));
+        buttons.transform.SetParent(transform, false);
+        ((RectTransform)buttons.transform).anchoredPosition = new Vector2(0, -220);
 
-        Image image = buttonObject.AddComponent<Image>();
-        image.color = buttonColor;
-        Button button = buttonObject.AddComponent<Button>();
-        button.onClick.AddListener(Replay);
+        PixelButton.Create("ReplayButton", buttons.transform, "REPLAY", Vector2.zero, font, buttonColor, textColor, Replay);
+        PixelButton.Create("HomeButton", buttons.transform, "HOME", new Vector2(0, -140), font, buttonColor, textColor, GoHome);
 
-        GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer));
-        labelObject.transform.SetParent(buttonObject.transform, false);
-        RectTransform labelRect = (RectTransform)labelObject.transform;
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = Vector2.zero;
-        labelRect.offsetMax = Vector2.zero;
-        TextMeshProUGUI label = labelObject.AddComponent<TextMeshProUGUI>();
-        if (font != null) label.font = font;
-        label.text = "Replay";
-        label.fontSize = 48;
-        label.alignment = TextAlignmentOptions.Center;
-        label.color = textColor;
-
-        CanvasGroup group = buttonObject.AddComponent<CanvasGroup>();
+        CanvasGroup group = buttons.AddComponent<CanvasGroup>();
         group.alpha = 0.0f;
         group.interactable = false;
         group.blocksRaycasts = false;
