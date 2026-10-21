@@ -113,7 +113,10 @@ public abstract class EndScreen : MonoBehaviour
         return child.AddComponent<T>();
     }
 
-    // A big centered title in the screen's font.
+    // How far above the middle of the screen the title sits, leaving room for the buttons below.
+    const float TitleRaise = 150.0f;
+
+    // A big centered title in the screen's font, raised above the middle of the screen.
     protected TextMeshProUGUI CreateTitle(string text, float fontSize, Color color)
     {
         TextMeshProUGUI title = CreateFullScreen<TextMeshProUGUI>("Title");
@@ -121,6 +124,9 @@ public abstract class EndScreen : MonoBehaviour
         title.text = text;
         title.fontSize = fontSize;
         title.alignment = TextAlignmentOptions.Center;
+        // A bottom margin shifts the centered text up while the title still fills the screen,
+        // so effects placed from its letter positions (like the blood drips) stay lined up.
+        title.margin = new Vector4(0, 0, 0, TitleRaise * 2);
         title.color = color;
         title.raycastTarget = false;
         return title;
