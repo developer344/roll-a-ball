@@ -5,7 +5,7 @@ using TMPro;
 
 // The win screen: the screen goes black, a lightning bolt strikes, "You Win!" appears
 // behind it, and after a moment Replay and Home buttons show up.
-// Everything is built at runtime by WinCelebration.Play(), so nothing needs to be set up in the scene.
+// Lives in the WinScreen scene (loaded with EndScreen.ShowWin()) and builds everything when it starts.
 public class WinCelebration : EndScreen
 {
     // Darkness before the strike, and how long the bolt takes to reach the bottom.
@@ -25,28 +25,20 @@ public class WinCelebration : EndScreen
     private Image flash;
     private CanvasGroup replayGroup;
 
-    public static void Play(GameObject winTextObject)
+    void Start()
     {
-        WinCelebration screen = Create<WinCelebration>("WinCelebration");
-        if (screen == null) return;
-
-        // The win screen shows its own text, so hide the HUD one.
-        TextMeshProUGUI hudLabel = winTextObject.GetComponent<TextMeshProUGUI>();
-        winTextObject.SetActive(false);
-
-        screen.Build(hudLabel);
-        screen.StartCoroutine(screen.Animate());
+        Build();
+        StartCoroutine(Animate());
     }
 
     // Black background, text, bolt, flash and Replay and Home buttons.
-    void Build(TextMeshProUGUI hudLabel)
+    void Build()
     {
-        // Black background covering the game and the HUD.
         Image background = CreateFullScreen<Image>("Background");
         background.color = Color.black;
 
         // "You Win!" sits behind the bolt and is hidden until it strikes.
-        winLabel = CreateTitle("You Win!", hudLabel, 120, Color.white);
+        winLabel = CreateTitle("You Win!", 120, Color.white);
         winGroup = winLabel.gameObject.AddComponent<CanvasGroup>();
         winGroup.alpha = 0.0f;
 
@@ -58,14 +50,11 @@ public class WinCelebration : EndScreen
         flash.color = new Color(1, 1, 1, 0);
         flash.raycastTarget = false;
 
-        replayGroup = CreateEndButtons(winLabel.font, Color.white, Color.black);
+        replayGroup = CreateEndButtons(Color.white, Color.black);
     }
 
     IEnumerator Animate()
     {
-        // Freeze the game behind the win screen; the animation runs on unscaled time.
-        Time.timeScale = 0.0f;
-
         // Wait a frame so the new canvas has its screen size before the bolt is shaped.
         yield return null;
         bolt.Regenerate();

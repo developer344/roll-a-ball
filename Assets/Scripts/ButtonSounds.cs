@@ -18,20 +18,29 @@ public class ButtonSounds : MonoBehaviour, IPointerEnterHandler, ISelectHandler
         button.gameObject.AddComponent<ButtonSounds>();
     }
 
+    // Plays the button click sound from code, e.g. when a slider changes.
+    public static void PlayClick()
+    {
+        EnsureSource();
+        Play(clickClip);
+    }
+
     void Awake()
     {
         button = GetComponent<Button>();
         button.onClick.AddListener(() => Play(clickClip));
+        EnsureSource();
+    }
 
-        if (source == null)
-        {
-            GameObject player = new GameObject("ButtonSounds");
-            DontDestroyOnLoad(player);
-            source = player.AddComponent<AudioSource>();
-            // Clips live in Assets/Sounds/Resources.
-            hoverClip = Resources.Load<AudioClip>("button_hover");
-            clickClip = Resources.Load<AudioClip>("button_click");
-        }
+    static void EnsureSource()
+    {
+        if (source != null) return;
+        GameObject player = new GameObject("ButtonSounds");
+        DontDestroyOnLoad(player);
+        source = player.AddComponent<AudioSource>();
+        // Clips live in Assets/Sounds/Resources.
+        hoverClip = Resources.Load<AudioClip>("button_hover");
+        clickClip = Resources.Load<AudioClip>("button_click");
     }
 
     public void OnPointerEnter(PointerEventData eventData)

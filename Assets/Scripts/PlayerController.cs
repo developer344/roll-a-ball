@@ -38,6 +38,8 @@ public class PlayerController : MonoBehaviour
         // Never let the Rigidbody sleep, so the enemy can still hit a player standing still.
         rb.sleepThreshold = 0.0f;
         audioSource = GetComponent<AudioSource>();
+        // Light blue arrow floating above the player.
+        MarkerArrow.Create(transform, new Color(0.1f, 0.45f, 1.0f));
         if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
         // Fall back to Assets/Sounds/Resources/pickup.mp3 when nothing is set in the Inspector.
         if (pickupSound == null) pickupSound = Resources.Load<AudioClip>("pickup");
@@ -85,15 +87,9 @@ public class PlayerController : MonoBehaviour
         countText.text = "Moons Collected\n" + count.ToString() + "/12";
         if (count >= 12)
         {
-            winTextObject.SetActive(true);
             if (musicSource != null) musicSource.Stop();
-            // Play the win light show.
-            WinCelebration.Play(winTextObject);
-            // Destroy any remaining enemies (none is fine).
-            foreach (GameObject enemy in GameObject.FindGameObjectsWithTag("Enemy"))
-            {
-                Destroy(enemy);
-            }
+            // Go to the win screen scene.
+            EndScreen.ShowWin();
         }
     }
 
@@ -124,8 +120,8 @@ public class PlayerController : MonoBehaviour
         {
             // Destroy the current object
             Destroy(gameObject);
-            // Show the bloody "You Lose!" screen.
-            LoseScreen.Play(winTextObject);
+            // Go to the bloody "You Lose!" screen scene.
+            EndScreen.ShowLose();
         }
     }
 }

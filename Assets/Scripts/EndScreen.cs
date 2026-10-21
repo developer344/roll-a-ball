@@ -1,37 +1,49 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
-// Shared base for the full-screen win and lose screens: an overlay canvas on top of everything,
-// helpers to build UI on it at runtime, Replay and Home buttons, and timing helpers on unscaled time.
+// Shared base for the win and lose screens. Each screen is its own scene (WinScreen, LoseScreen)
+// holding a camera and one object with the screen's component; the game loads it with
+// EndScreen.ShowWin() or EndScreen.ShowLose(). On start, the component turns its object into a
+// full-screen canvas and builds the UI on it at runtime. Also provides Replay and Home buttons
+// and timing helpers on unscaled time.
 public abstract class EndScreen : MonoBehaviour
 {
-    // The end screen currently showing, so only one ever runs (no lose screen on top of a win).
-    private static EndScreen current;
+    const string WinScenePath = "Assets/Scenes/WinScreen.unity";
+    const string LoseScenePath = "Assets/Scenes/LoseScreen.unity";
 
-    // Creates the screen's GameObject with an overlay canvas and returns its component,
-    // or null if an end screen is already showing.
-    protected static T Create<T>(string name) where T : EndScreen
+    // Font for the screen's text, and the scenes the Replay and Home buttons load.
+    public TMP_FontAsset font;
+    public string gameScenePath = "Assets/Scenes/MiniGame.unity";
+    public string homeScenePath = "Assets/Scenes/StartMenu.unity";
+
+    public static void ShowWin()
     {
-        if (current != null) return null;
+        LoadScene(WinScenePath);
+    }
 
-        T screen = new GameObject(name).AddComponent<T>();
-        current = screen;
+    public static void ShowLose()
+    {
+        LoadScene(LoseScenePath);
+    }
 
-        Canvas canvas = screen.gameObject.AddComponent<Canvas>();
+    protected virtual void Awake()
+    {
+        Canvas canvas = gameObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 1000;
-        CanvasScaler scaler = screen.gameObject.AddComponent<CanvasScaler>();
+        CanvasScaler scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
-        screen.gameObject.AddComponent<GraphicRaycaster>();
-        return screen;
+        gameObject.AddComponent<GraphicRaycaster>();
+        EnsureEventSystem();
     }
 
-    // Plays a sound effect. Audio keeps playing while the game is frozen behind the screen.
+    // Plays a sound effect.
     protected void PlaySound(AudioClip clip, float volume = 1.0f)
     {
         AudioSource source = GetComponent<AudioSource>();
@@ -39,17 +51,14 @@ public abstract class EndScreen : MonoBehaviour
         source.PlayOneShot(clip, volume);
     }
 
-    // The start menu scene the Home button goes back to.
-    const string HomeScenePath = "Assets/Scenes/StartMenu.unity";
-
     protected void Replay()
     {
-        LoadScene(SceneManager.GetActiveScene().path);
+        LoadScene(gameScenePath);
     }
 
     protected void GoHome()
     {
-        LoadScene(HomeScenePath);
+        LoadScene(homeScenePath);
     }
 
     static void LoadScene(string scenePath)
@@ -61,6 +70,15 @@ public abstract class EndScreen : MonoBehaviour
 #else
         SceneManager.LoadScene(scenePath);
 #endif
+    }
+
+    // The buttons need an EventSystem to be clicked; this scene has none of its own.
+    static void EnsureEventSystem()
+    {
+        if (FindAnyObjectByType<EventSystem>() != null) return;
+        GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+        // A module created from code has no input actions yet; give it the standard UI ones.
+        eventSystem.GetComponent<InputSystemUIInputModule>().AssignDefaultActions();
     }
 
     // Runs `step` every frame with t going from 0 to 1 over `duration` real seconds.
@@ -95,11 +113,11 @@ public abstract class EndScreen : MonoBehaviour
         return child.AddComponent<T>();
     }
 
-    // A big centered title, using the HUD text's font when there is one.
-    protected TextMeshProUGUI CreateTitle(string text, TextMeshProUGUI hudLabel, float fontSize, Color color)
+    // A big centered title in the screen's font.
+    protected TextMeshProUGUI CreateTitle(string text, float fontSize, Color color)
     {
         TextMeshProUGUI title = CreateFullScreen<TextMeshProUGUI>("Title");
-        if (hudLabel != null) title.font = hudLabel.font;
+        if (font != null) title.font = font;
         title.text = text;
         title.fontSize = fontSize;
         title.alignment = TextAlignmentOptions.Center;
@@ -110,7 +128,7 @@ public abstract class EndScreen : MonoBehaviour
 
     // Hidden Replay and Home buttons below the title, in the same pixel style as the menu buttons;
     // fade them in with ShowReplay().
-    protected CanvasGroup CreateEndButtons(TMP_FontAsset font, Color buttonColor, Color textColor)
+    protected CanvasGroup CreateEndButtons(Color buttonColor, Color textColor)
     {
         GameObject buttons = new GameObject("EndButtons", typeof(RectTransform));
         buttons.transform.SetParent(transform, false);

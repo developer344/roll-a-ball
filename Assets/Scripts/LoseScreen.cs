@@ -6,7 +6,7 @@ using TMPro;
 
 // The lose screen: the screen goes black, a blood-red "You Lose!" fades in, blood drips
 // run down from the bottom of its letters, and after a moment Replay and Home buttons show up.
-// Everything is built at runtime by LoseScreen.Play(), so nothing needs to be set up in the scene.
+// Lives in the LoseScreen scene (loaded with EndScreen.ShowLose()) and builds everything when it starts.
 public class LoseScreen : EndScreen
 {
     // How long the text takes to fade in, and how long the drips keep running.
@@ -27,25 +27,18 @@ public class LoseScreen : EndScreen
     // When each drip starts, so a few of them can make a sound.
     private readonly List<float> dripDelays = new List<float>();
 
-    public static void Play(GameObject winTextObject)
+    void Start()
     {
-        LoseScreen screen = Create<LoseScreen>("LoseScreen");
-        if (screen == null) return;
-
-        // The lose screen shows its own text, so hide the HUD one.
-        TextMeshProUGUI hudLabel = winTextObject.GetComponent<TextMeshProUGUI>();
-        winTextObject.SetActive(false);
-
-        screen.Build(hudLabel);
-        screen.StartCoroutine(screen.Animate());
+        Build();
+        StartCoroutine(Animate());
     }
 
-    void Build(TextMeshProUGUI hudLabel)
+    void Build()
     {
         Image background = CreateFullScreen<Image>("Background");
         background.color = Color.black;
 
-        loseLabel = CreateTitle("You Lose!", hudLabel, 140, bloodColor);
+        loseLabel = CreateTitle("You Lose!", 140, bloodColor);
         loseGroup = loseLabel.gameObject.AddComponent<CanvasGroup>();
         loseGroup.alpha = 0.0f;
 
@@ -54,14 +47,11 @@ public class LoseScreen : EndScreen
         drips.color = bloodColor;
         drips.raycastTarget = false;
 
-        replayGroup = CreateEndButtons(loseLabel.font, new Color(0.35f, 0.0f, 0.0f), Color.white);
+        replayGroup = CreateEndButtons(new Color(0.35f, 0.0f, 0.0f), Color.white);
     }
 
     IEnumerator Animate()
     {
-        // Freeze the game behind the lose screen; the animation runs on unscaled time.
-        Time.timeScale = 0.0f;
-
         // Wait a frame so the new canvas has its screen size before the letters are measured.
         yield return null;
         AddDripsUnderLetters();

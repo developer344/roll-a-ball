@@ -7,7 +7,7 @@ using UnityEngine.UI;
 using TMPro;
 
 // The Moon Hunter start menu, in a pixel-art style: a starry night with a spinning pixel moon,
-// the title, the goal, a Play button that loads the game and a Controls button that explains how to play.
+// the title, the goal, a Play button that loads the game and a Settings button with the difficulty and controls.
 // The whole menu is built at runtime, so the StartMenu scene only needs this one component.
 public class StartMenu : MonoBehaviour
 {
@@ -38,9 +38,20 @@ public class StartMenu : MonoBehaviour
     private readonly List<Image> stars = new List<Image>();
     private readonly List<float> starPhases = new List<float>();
     private GameObject mainPanel;
-    private GameObject controlsPanel;
+    private GameObject settingsPanel;
     private Button playButton;
     private Button backButton;
+
+    // Difficulty slider: snaps between one notch per level, and its fill takes the level's color.
+    private Image difficultyFill;
+    private readonly List<TextMeshProUGUI> difficultyStepLabels = new List<TextMeshProUGUI>();
+    private TextMeshProUGUI difficultyLabel;
+    static readonly Color[] DifficultyColors =
+    {
+        new Color(0.3f, 0.85f, 0.35f),
+        new Color(1.0f, 0.8f, 0.2f),
+        new Color(0.95f, 0.25f, 0.2f),
+    };
 
     void Start()
     {
@@ -69,12 +80,12 @@ public class StartMenu : MonoBehaviour
         CreateShadowedText("Goal", main, "Collect all 12 moons to win!", 30, Color.white, new Vector2(0, -70), new Vector2(1600, 60), 1);
 
         playButton = CreateButton("PlayButton", main, "PLAY", new Vector2(0, -200), PlayGame);
-        CreateButton("ControlsButton", main, "CONTROLS", new Vector2(0, -330), ShowControls);
+        CreateButton("SettingsButton", main, "SETTINGS", new Vector2(0, -330), ShowSettings);
 
-        // Controls screen, hidden until the Controls button is pressed.
-        controlsPanel = CreateRect<RectTransform>("ControlsPanel", canvas, Vector2.zero, Vector2.zero, true).gameObject;
-        BuildControls(controlsPanel.transform);
-        controlsPanel.SetActive(false);
+        // Settings screen, hidden until the Settings button is pressed.
+        settingsPanel = CreateRect<RectTransform>("SettingsPanel", canvas, Vector2.zero, Vector2.zero, true).gameObject;
+        BuildSettings(settingsPanel.transform);
+        settingsPanel.SetActive(false);
 
         Select(playButton);
     }
@@ -92,31 +103,46 @@ public class StartMenu : MonoBehaviour
         }
     }
 
-    void BuildControls(Transform panel)
+    void BuildSettings(Transform panel)
     {
         Image dim = CreateRect<Image>("Dim", panel, Vector2.zero, Vector2.zero, true);
         dim.color = new Color(0.0f, 0.0f, 0.0f, 0.7f);
 
-        CreateShadowedText("Heading", panel, "CONTROLS", 72, titleColor, new Vector2(0, 400), new Vector2(1600, 110), 2);
+        CreateShadowedText("Heading", panel, "SETTINGS", 64, titleColor, new Vector2(0, 450), new Vector2(1600, 100), 2);
 
-        // W A S D keys, laid out like on a keyboard.
-        CreateKey(panel, "W", new Vector2(0, 250));
-        CreateKey(panel, "A", new Vector2(-115, 135));
-        CreateKey(panel, "S", new Vector2(0, 135));
-        CreateKey(panel, "D", new Vector2(115, 135));
+        // Difficulty: a stepped slider; drag it, click the track, or use left/right when it's selected.
+        CreateShadowedText("DifficultyHeading", panel, "DIFFICULTY", 32, titleColor, new Vector2(0, 360), new Vector2(1600, 60), 1);
+        CreateDifficultySlider(panel, new Vector2(0, 280));
+        difficultyLabel = CreateText("DifficultyLabel", panel, "", 22, Color.white, new Vector2(0, 160), new Vector2(1600, 50));
+        SetDifficulty(GameSettings.Difficulty);
+
+        // Controls: W A S D keys laid out like on a keyboard, and what to do.
+        CreateShadowedText("ControlsHeading", panel, "CONTROLS", 32, titleColor, new Vector2(0, 100), new Vector2(1600, 60), 1);
+        CreateKey(panel, "W", new Vector2(0, 15), 78);
+        CreateKey(panel, "A", new Vector2(-90, -70), 78);
+        CreateKey(panel, "S", new Vector2(0, -70), 78);
+        CreateKey(panel, "D", new Vector2(90, -70), 78);
 
         string help =
-            "<color=#FFEE99>MOVE</color>\n" +
-            "W A S D  /  Arrow Keys  /  Left Stick\n\n" +
-            "<color=#FFEE99>GOAL</color>\n" +
-            "Roll into all 12 moons to collect them\n\n" +
-            "<color=#FF7777>DANGER</color>\n" +
-            "Don't get caught by the enemy!\n" +
-            "It starts chasing as soon as you move.";
-        TextMeshProUGUI helpText = CreateText("Help", panel, help, 28, Color.white, new Vector2(0, -130), new Vector2(1700, 420));
-        helpText.lineSpacing = 20;
+            "<color=#FFEE99>MOVE</color>  W A S D / Arrow Keys / Left Stick\n" +
+            "<color=#FFEE99>GOAL</color>  Roll into all 12 moons\n" +
+            "<color=#FF7777>DANGER</color>  Don't get caught by the enemy!";
+        TextMeshProUGUI helpText = CreateText("Help", panel, help, 22, Color.white, new Vector2(0, -230), new Vector2(1700, 160));
+        helpText.lineSpacing = 30;
 
         backButton = CreateButton("BackButton", panel, "BACK", new Vector2(0, -420), ShowMain);
+    }
+
+    // Colors the slider for the chosen level, highlights its step label, and saves the choice.
+    void SetDifficulty(int level)
+    {
+        GameSettings.Difficulty = level;
+        difficultyFill.color = DifficultyColors[level];
+        for (int i = 0; i < difficultyStepLabels.Count; i++)
+        {
+            difficultyStepLabels[i].color = i == level ? DifficultyColors[level] : new Color(0.55f, 0.55f, 0.65f);
+        }
+        difficultyLabel.text = GameSettings.DifficultyNames[level] + " - " + GameSettings.DifficultyDescriptions[level];
     }
 
     void PlayMusic()
@@ -141,16 +167,16 @@ public class StartMenu : MonoBehaviour
 #endif
     }
 
-    void ShowControls()
+    void ShowSettings()
     {
         mainPanel.SetActive(false);
-        controlsPanel.SetActive(true);
+        settingsPanel.SetActive(true);
         Select(backButton);
     }
 
     void ShowMain()
     {
-        controlsPanel.SetActive(false);
+        settingsPanel.SetActive(false);
         mainPanel.SetActive(true);
         Select(playButton);
     }
@@ -199,15 +225,79 @@ public class StartMenu : MonoBehaviour
     }
 
     // A pixel-art keycap: dark outline, light face and a darker bottom edge.
-    void CreateKey(Transform parent, string letter, Vector2 position)
+    void CreateKey(Transform parent, string letter, Vector2 position, float size)
     {
-        Image outline = CreateRect<Image>("Key" + letter, parent, position, new Vector2(102, 102));
+        Image outline = CreateRect<Image>("Key" + letter, parent, position, new Vector2(size, size));
         outline.color = outlineColor;
-        Image face = CreateRect<Image>("Face", outline.transform, Vector2.zero, new Vector2(102 - Pixel * 2, 102 - Pixel * 2));
+        float inner = size - Pixel * 2;
+        Image face = CreateRect<Image>("Face", outline.transform, Vector2.zero, new Vector2(inner, inner));
         face.color = new Color(0.9f, 0.9f, 0.95f);
-        Image edge = CreateRect<Image>("Edge", face.transform, new Vector2(0, -45 + Pixel * 1.5f), new Vector2(102 - Pixel * 2, Pixel * 2));
+        Image edge = CreateRect<Image>("Edge", face.transform, new Vector2(0, -inner / 2 + Pixel), new Vector2(inner, Pixel * 2));
         edge.color = new Color(0.55f, 0.55f, 0.65f);
-        CreateText("Letter", face.transform, letter, 36, new Color(0.1f, 0.1f, 0.15f), new Vector2(0, Pixel), new Vector2(90, 90));
+        CreateText("Letter", face.transform, letter, size * 0.36f, new Color(0.1f, 0.1f, 0.15f), new Vector2(0, Pixel / 2), new Vector2(inner, inner));
+    }
+
+    // A pixel-art slider that snaps to one notch per difficulty level: an outlined track that fills
+    // in the level's color, a chunky handle, tick marks under each notch and a label under each tick.
+    void CreateDifficultySlider(Transform parent, Vector2 position)
+    {
+        Vector2 trackSize = new Vector2(600, 30);
+        Vector2 handleSize = new Vector2(42, 66);
+        int steps = GameSettings.DifficultyNames.Length;
+
+        RectTransform root = CreateRect<RectTransform>("DifficultySlider", parent, position, trackSize);
+
+        // Track: dark outline with a dim inside, and the colored fill on top of it.
+        CreateRect<Image>("TrackOutline", root, Vector2.zero, Vector2.zero, true).color = outlineColor;
+        Image inside = CreateRect<Image>("TrackInside", root, Vector2.zero, trackSize - Vector2.one * Pixel * 2);
+        inside.color = new Color(0.15f, 0.15f, 0.22f);
+        RectTransform fillArea = CreateRect<RectTransform>("FillArea", root, Vector2.zero, Vector2.zero, true);
+        fillArea.offsetMin = new Vector2(Pixel, Pixel);
+        fillArea.offsetMax = new Vector2(-Pixel, -Pixel);
+        difficultyFill = CreateRect<Image>("Fill", fillArea, Vector2.zero, Vector2.zero, true);
+
+        // The handle moves between the ends of this area, so its center lines up with the ticks below.
+        RectTransform handleArea = CreateRect<RectTransform>("HandleArea", root, Vector2.zero, Vector2.zero, true);
+        handleArea.offsetMin = new Vector2(handleSize.x / 2, 0);
+        handleArea.offsetMax = new Vector2(-handleSize.x / 2, 0);
+        RectTransform handle = CreateRect<RectTransform>("Handle", handleArea, Vector2.zero, new Vector2(handleSize.x, handleSize.y - trackSize.y));
+        CreateRect<Image>("HandleShadow", handle, new Vector2(Pixel, -Pixel), handleSize).color = new Color(0, 0, 0, 0.6f);
+        CreateRect<Image>("HandleOutline", handle, Vector2.zero, handleSize).color = outlineColor;
+        Image handleFace = CreateRect<Image>("HandleFace", handle, Vector2.zero, handleSize - Vector2.one * Pixel * 2);
+
+        // A tick under each notch, with the level's name under it.
+        float travel = trackSize.x - handleSize.x;
+        for (int i = 0; i < steps; i++)
+        {
+            float x = -travel / 2 + travel * i / (steps - 1);
+            CreateRect<Image>("Tick", root, new Vector2(x, -trackSize.y / 2 - Pixel * 3), new Vector2(Pixel, Pixel * 2)).color = new Color(0.55f, 0.55f, 0.65f);
+            difficultyStepLabels.Add(CreateText("StepLabel", root, GameSettings.DifficultyNames[i], 18, Color.white, new Vector2(x, -trackSize.y / 2 - 52), new Vector2(200, 40)));
+        }
+
+        Slider slider = root.gameObject.AddComponent<Slider>();
+        slider.fillRect = difficultyFill.rectTransform;
+        slider.handleRect = handle;
+        slider.targetGraphic = handleFace;
+        slider.direction = Slider.Direction.LeftToRight;
+        slider.minValue = 0;
+        slider.maxValue = steps - 1;
+        slider.wholeNumbers = true;
+        slider.value = GameSettings.Difficulty;
+
+        // The handle dims slightly at rest and lights up when hovered, dragged or selected with the keyboard.
+        ColorBlock colors = slider.colors;
+        colors.normalColor = new Color(0.8f, 0.8f, 0.85f);
+        colors.highlightedColor = Color.white;
+        colors.selectedColor = Color.white;
+        colors.pressedColor = titleColor;
+        slider.colors = colors;
+
+        // Added after setting the starting value, so opening the menu doesn't click.
+        slider.onValueChanged.AddListener(value =>
+        {
+            SetDifficulty(Mathf.RoundToInt(value));
+            ButtonSounds.PlayClick();
+        });
     }
 
     Button CreateButton(string name, Transform parent, string label, Vector2 position, UnityEngine.Events.UnityAction onClick)
